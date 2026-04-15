@@ -4,9 +4,13 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 
 import pl.ksendev.havenblock.HavenBlock;
 import pl.ksendev.havenblock.island.Island;
+import pl.ksendev.havenblock.island.IslandRoles;
 import pl.ksendev.havenblock.utils.MessageUtils;
 
 public class MainCommand implements CommandExecutor {
@@ -70,8 +74,84 @@ public class MainCommand implements CommandExecutor {
             return true;
         }
 
+        if (args.length == 1 && args[0].equalsIgnoreCase("setspawn")) {
+            Location playerLocation = player.getLocation();
+            Island playerIsland = plugin.getIslandManager().getIsland(player.getUniqueId());
+            if (playerIsland == null) {
+                MessageUtils.sendMessage(player, "<red>Nie masz wyspy! Uzyj /hb create", true);
+                return true;
+            }
+            playerIsland.setIslandSpawn(playerLocation);
+            MessageUtils.sendMessage(player, "<green>Ustawiono nowy spawn wyspy.", true);
+            return true;
+
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("invite")) {
+            Island playerIsland = plugin.getIslandManager().getIsland(player.getUniqueId());
+            if (playerIsland == null) {
+                MessageUtils.sendMessage(player, "<red>Nie masz wyspy! Uzyj /hb create", true);
+                return true;
+            }
+            if (playerIsland.getIslandMembers().get(player.getUniqueId()) != IslandRoles.Owner) {
+                MessageUtils.sendMessage(player, "<red>Nie masz permisji, by zapraszać innych graczy", true);
+                return true;
+            }
+            OfflinePlayer invitedOfflinePlayer = Bukkit.getOfflinePlayer(args[1]);
+            if (!invitedOfflinePlayer.isOnline()) {
+                MessageUtils.sendMessage(player, "<red>Gracz o nicku <yellow>" + args[1] + "</yellow> nie jest online!", true);
+                return true;
+            }
+            Player invitedPlayer = Bukkit.getPlayer(invitedOfflinePlayer.getUniqueId());
+            if (invitedPlayer == player) {
+                MessageUtils.sendMessage(player, "<red>Nie możesz zaprosić siebie!", true);
+                return true;
+            }
+            if (plugin.getIslandManager().getIsland(invitedPlayer.getUniqueId()) != null) {
+                MessageUtils.sendMessage(player, "<red>Gracz <yellow>" + invitedPlayer.getName() + "</yellow> ma już wyspę!", true);
+                return true;
+            }
+            plugin.getInvitationManager().sendInvite(player, invitedPlayer);
+            return true;
+        }
+
+        if (args.length == 1 && args[0].equalsIgnoreCase("accept")) {
+            plugin.getInvitationManager().acceptInvite(player);
+            return true;
+        }
+        if (args.length == 1 && args[0].equalsIgnoreCase("deny")) {
+            plugin.getInvitationManager().denyInvite(player);
+            return true;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("kick")) {
+            Island playerIsland = plugin.getIslandManager().getIsland(player.getUniqueId());
+            if (playerIsland == null) {
+                MessageUtils.sendMessage(player, "<red>Nie masz wyspy! Uzyj /hb create", true);
+                return true;
+            }
+            if (playerIsland.getIslandMembers().get(player.getUniqueId()) != IslandRoles.Owner) {
+                MessageUtils.sendMessage(player, "<red>Nie masz permisji, by wyrzucać graczy", true);
+                return true;
+            }
+            OfflinePlayer kickingOfflinePlayer = Bukkit.getOfflinePlayer(args[1]);
+            Player kickingPlayer = Bukkit.getPlayer(kickingOfflinePlayer.getUniqueId());
+            if (kickingPlayer == player) {
+                MessageUtils.sendMessage(player, "<red>Nie możesz wyrzucić samego siebie!", true);
+                return true;
+            }
+            if (!playerIsland.getIslandMembers().containsKey(kickingPlayer.getUniqueId())) {
+                MessageUtils.sendMessage(player, "<red>Ten gracz nie jest dodany do twojej wyspy!", true);
+                return true;
+            }
+            plugin.getIslandManager().kickPlayerFromIsland(playerIsland, kickingPlayer.getUniqueId());
+            MessageUtils.sendMessage(player, "<green>Wyrzucono gracza <yellow>" + kickingPlayer.getName() + "</yellow> z wyspy", true);
+            MessageUtils.sendMessage(kickingPlayer, "<yellow>Zostałeś wyrzucony z wyspy.", true);
+            kickingPlayer.teleport(plugin.getIslandManager().getLobbyLocation());
+            return true;
+        }
+
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-            plugin.getIslandManager().reloadIslands();
+            plugin.reloadConfig();
             MessageUtils.sendMessage(sender, "<green>OK!", true);  
             return true;
         }
@@ -83,17 +163,17 @@ public class MainCommand implements CommandExecutor {
                 return true;
             }
         }
-        
-        return false;
+        showHelp(player);
+        return true;
     }
 
     private void showHelp(Player player) {
-        MessageUtils.sendMessage(player, "-------------------", false);
-        MessageUtils.sendMessage(player, "/hb create - Tworzy wyspe", false);
-        MessageUtils.sendMessage(player, "/hb home - Teleportuje do wyspy", false);
-        MessageUtils.sendMessage(player, "/hb delete - Usuwa wyspe", false);
-        MessageUtils.sendMessage(player, "/hb invite - Zaprasza gracza do wspoltworzenia wyspy", false);
-        MessageUtils.sendMessage(player, "/hb kick - Wyrzuca gracza z wyspy", false);
-        MessageUtils.sendMessage(player, "-------------------", false);
+        MessageUtils.sendMessage(player, "<dark_gray>-------------------", false);
+        MessageUtils.sendMessage(player, "<yellow>/hb create <gray>- Tworzy wyspe", false);
+        MessageUtils.sendMessage(player, "<yellow>/hb home <gray>- Teleportuje do wyspy", false);
+        MessageUtils.sendMessage(player, "<yellow>/hb delete <gray>- Usuwa wyspe", false);
+        MessageUtils.sendMessage(player, "<yellow>/hb invite [nick] <gray>- Zaprasza gracza do wspoltworzenia wyspy", false);
+        MessageUtils.sendMessage(player, "<yellow>/hb kick [nick] <gray>- Wyrzuca gracza z wyspy", false);
+        MessageUtils.sendMessage(player, "<dark_gray>-------------------", false);
     }
 }

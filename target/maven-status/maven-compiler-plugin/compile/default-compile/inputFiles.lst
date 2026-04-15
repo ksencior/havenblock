@@ -1,8 +1,11 @@
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\island\Island.java
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\island\IslandBuilder.java
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\HavenBlock.java
+D:\work\havenblock\src\main\java\pl\ksendev\havenblock\database\DatabaseManager.java
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\command\MainCommand.java
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\utils\MessageUtils.java
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\island\SchematicManager.java
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\island\IslandGenerator.java
+D:\work\havenblock\src\main\java\pl\ksendev\havenblock\invites\InvitationManager.java
 D:\work\havenblock\src\main\java\pl\ksendev\havenblock\island\IslandManager.java
+D:\work\havenblock\src\main\java\pl\ksendev\havenblock\island\IslandRoles.java

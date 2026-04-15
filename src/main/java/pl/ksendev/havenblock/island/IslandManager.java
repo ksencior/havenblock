@@ -5,28 +5,25 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import pl.ksendev.havenblock.HavenBlock;
+import pl.ksendev.havenblock.database.DatabaseManager;
 
 public class IslandManager {
     private final HavenBlock plugin;
     private final Map<UUID, Island> islands = new HashMap<>();
-    private final File islandsFile;
+    private final DatabaseManager databaseManager;
     private final IslandGenerator islandGenerator;
 
     private Location lobbyLocation;
 
     public IslandManager(HavenBlock _pl) {
         this.plugin = _pl;
-        this.islandsFile = new File(plugin.getDataFolder(), "islands.yml");
+        this.databaseManager = new DatabaseManager(plugin);
         
         // Pobieranie świata (zakładamy że domyślna to "world")
         World world = Bukkit.getWorld("world");
@@ -46,38 +43,15 @@ public class IslandManager {
     }
 
     private void loadIslands() {
-        if (!islandsFile.exists())
-            return;
-
-        FileConfiguration config = YamlConfiguration.loadConfiguration(islandsFile);
-
-        for (String uuid : config.getKeys(false)) {
-            Island island = new Island(UUID.fromString(uuid));
-
-            Location islandSpawn = config.getLocation(uuid + ".islandSpawn");
-            if (islandSpawn != null) island.setIslandSpawn(islandSpawn);
-            
-            // Ładowanie nowych pól
-            int gridX = config.getInt(uuid + ".gridX", 0);
-            int gridZ = config.getInt(uuid + ".gridZ", 0);
-            island.setGridPosition(gridX, gridZ);
-            
-            String schematicName = config.getString(uuid + ".schematicName", "");
-            island.setSchematicName(schematicName);
-            
-            Location minBlock = config.getLocation(uuid + ".buildableMinBlock");
-            Location maxBlock = config.getLocation(uuid + ".buildableMaxBlock");
-            if (minBlock != null && maxBlock != null) {
-                island.setBuildableRegion(minBlock, maxBlock);
-            }
-            
-            islands.put(island.getOwnerUUID(), island);
-        }
-    }        
+        // Ładowanie wysep z bazy danych będzie po stronie aplikacji
+        // Wysepy są ładowane na żądanie (najleniwy loading)
+    }
 
     public boolean createNewIsland(UUID uuid) {
-        if (islands.containsKey(uuid))
+        // Sprawdzenie czy gracz ma już wyspę
+        if (databaseManager.hasIsland(uuid)) {
             return false;
+        }
         
         if (islandGenerator == null) {
             plugin.getLogger().severe("IslandGenerator nie został zainicjalizowany!");
@@ -92,62 +66,98 @@ public class IslandManager {
             return false;
         }
         
+        // Zapis do bazy
+        if (!databaseManager.saveIsland(newIsland)) {
+            plugin.getLogger().severe("Błąd przy zapisie wyspy do bazy!");
+            return false;
+        }
+        
+        // Cache w pamięci
         islands.put(uuid, newIsland);
-        saveIslands();
         return true;
     }
 
     public boolean deleteIsland(UUID uuid) {
-        if (islands.containsKey(uuid)) {
-            Island island = islands.get(uuid);
-            
-            // Czyszczenie terenu wyspy
-            if (islandGenerator != null) {
-                islandGenerator.deleteIsland(island);
-            }
-            
-            // Usunięcie z mapy
-            islands.remove(uuid);
-            saveIslands();
-            return true;
+        // Wczytanie wyspy
+        World world = Bukkit.getWorld("world");
+        Island island = databaseManager.loadIsland(uuid, world);
+        
+        if (island == null) {
+            return false;
         }
-        return false;
+        
+        // Czyszczenie terenu wyspy
+        if (islandGenerator != null) {
+            islandGenerator.deleteIsland(island);
+        }
+        
+        // Usunięcie z bazy
+        if (!databaseManager.deleteIsland(uuid)) {
+            return false;
+        }
+        
+        // Usunięcie z cache
+        islands.remove(uuid);
+        return true;
     }
 
     public Island getIsland(UUID uuid) {
-        return islands.get(uuid);
-    }
-
-    public void saveIslands() {
-        FileConfiguration config = new YamlConfiguration();
-
-        try {
-            for (Island island : islands.values()) {
-                String uuid = island.getOwnerUUID().toString();
-                
-                config.set(uuid + ".islandSpawn", island.getIslandSpawn());
-                config.set(uuid + ".gridX", island.getGridX());
-                config.set(uuid + ".gridZ", island.getGridZ());
-                config.set(uuid + ".schematicName", island.getSchematicName());
-                config.set(uuid + ".buildableMinBlock", island.getBuildableMinBlock());
-                config.set(uuid + ".buildableMaxBlock", island.getBuildableMaxBlock());
-            }
-            config.save(islandsFile);
-        } catch (IOException err) {
-            plugin.getLogger().severe("Nie udalo sie zapisac islands.yml: " + err.getMessage());
+        // Najpierw sprawdzaj cache
+        if (islands.containsKey(uuid)) {
+            return islands.get(uuid);
         }
+        
+        World world = Bukkit.getWorld("world");
+        if (world == null) {
+            return null;
+        }
+        
+        // Szukamy czy gracz jest właścicielem wyspy
+        Island island = databaseManager.loadIsland(uuid, world);
+        if (island != null) {
+            // Ładujemy wszystkich członków wyspy
+            databaseManager.loadIslandMembers(island);
+            islands.put(uuid, island);
+            return island;
+        }
+        
+        // Jeśli nie jest właścicielem - szukamy czy jest członkiem jakiejś wyspy
+        island = databaseManager.getIslandByMember(uuid, world);
+        if (island != null) {
+            // Ładujemy wszystkich członków tej wyspy
+            databaseManager.loadIslandMembers(island);
+            // Cache dla ułatwienia później
+            islands.put(island.getOwnerUUID(), island);
+            return island;
+        }
+        
+        return null;
     }
 
-    public void setLobbyLocation(Player player) {
-        lobbyLocation = player.getLocation();
-
-        plugin.saveConfig();
+    public void addMemberToIsland(Island island, UUID memberUUID, String role) {
+        island.getIslandMembers().put(memberUUID, IslandRoles.valueOf(role));
+        databaseManager.addMember(island.getOwnerUUID(), memberUUID, role);
     }
+
+    public void kickPlayerFromIsland(Island island, UUID playerUuid) {
+        if (!island.getIslandMembers().containsKey(playerUuid))
+            return;
+        island.removeFromIslandMembers(playerUuid);
+        databaseManager.removeMember(island.getOwnerUUID(), playerUuid);
+    }
+
     public void setLobbyLocation(Location loc) {
         lobbyLocation = loc;
+    }
+    public void setLobbyLocation(Player player) {
+        lobbyLocation = player.getLocation();
     }
 
     public Location getLobbyLocation() {
         return lobbyLocation;
+    }
+
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 }

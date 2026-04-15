@@ -8,10 +8,8 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import com.sk89q.worldedit.util.Location;
-
 import pl.ksendev.havenblock.command.MainCommand;
+import pl.ksendev.havenblock.invites.InvitationManager;
 import pl.ksendev.havenblock.island.IslandManager;
 
 /*
@@ -26,11 +24,13 @@ public class HavenBlock extends JavaPlugin
   private static final Logger LOGGER=Logger.getLogger("havenblock");
   private File configFile;
   private IslandManager islandManager;
+  private InvitationManager invitationManager;
 
   public void onEnable()
   {
 
     this.islandManager = new IslandManager(this);
+    this.invitationManager = new InvitationManager(this);
     this.configFile = new File(this.getDataFolder(), "config.yml");
     loadConfig();
     PluginCommand hbCommand = getCommand("hb");
@@ -41,7 +41,17 @@ public class HavenBlock extends JavaPlugin
 
   public void onDisable()
   {
+    // Zamykanie bazy danych
+    if (islandManager != null && islandManager.getDatabaseManager() != null) {
+      islandManager.getDatabaseManager().closeConnection();
+    }
     LOGGER.info("havenblock disabled");
+  }
+
+  public void reloadConfig() {
+    islandManager.reloadIslands();
+
+    loadConfig();
   }
 
   public void loadConfig () {
@@ -64,7 +74,6 @@ public class HavenBlock extends JavaPlugin
     }
   }
 
-  public IslandManager getIslandManager() {
-    return islandManager;
-  }
+  public IslandManager getIslandManager() { return islandManager; }
+  public InvitationManager getInvitationManager() { return invitationManager; }
 }
