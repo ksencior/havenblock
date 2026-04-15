@@ -1,5 +1,8 @@
 pl\ksendev\havenblock\utils\MessageUtils.class
 pl\ksendev\havenblock\island\Island.class
 pl\ksendev\havenblock\island\IslandManager.class
+pl\ksendev\havenblock\island\IslandBuilder.class
+pl\ksendev\havenblock\island\IslandGenerator.class
+pl\ksendev\havenblock\island\SchematicManager.class
 pl\ksendev\havenblock\HavenBlock.class
 pl\ksendev\havenblock\command\MainCommand.class
