@@ -9,8 +9,10 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import pl.ksendev.havenblock.command.MainCommand;
+import pl.ksendev.havenblock.gui.IslandGui;
 import pl.ksendev.havenblock.invites.InvitationManager;
 import pl.ksendev.havenblock.island.IslandManager;
+import pl.ksendev.havenblock.protection.BuildProtectionListener;
 
 /*
 TODO:
@@ -25,16 +27,22 @@ public class HavenBlock extends JavaPlugin
   private File configFile;
   private IslandManager islandManager;
   private InvitationManager invitationManager;
+  private IslandGui islandGui;
 
   public void onEnable()
   {
 
     this.islandManager = new IslandManager(this);
     this.invitationManager = new InvitationManager(this);
+    this.islandGui = new IslandGui(this);
     this.configFile = new File(this.getDataFolder(), "config.yml");
     loadConfig();
     PluginCommand hbCommand = getCommand("hb");
     hbCommand.setExecutor(new MainCommand(this));
+
+    // Rejestracja listenerów
+    getServer().getPluginManager().registerEvents(new BuildProtectionListener(this), this);
+    getServer().getPluginManager().registerEvents(islandGui, this);
 
     LOGGER.info("havenblock enabled");
   }
@@ -76,4 +84,5 @@ public class HavenBlock extends JavaPlugin
 
   public IslandManager getIslandManager() { return islandManager; }
   public InvitationManager getInvitationManager() { return invitationManager; }
+  public IslandGui getIslandGui() { return islandGui; }
 }

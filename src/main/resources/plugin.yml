@@ -9,3 +9,4 @@ commands:
   hb:
     description: Główna komenda
     usage: /hb <command> [args]
+    aliases: [is, wyspa]

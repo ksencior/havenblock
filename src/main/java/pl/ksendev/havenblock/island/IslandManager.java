@@ -20,13 +20,14 @@ public class IslandManager {
     private final IslandGenerator islandGenerator;
 
     private Location lobbyLocation;
+    World world;
 
     public IslandManager(HavenBlock _pl) {
         this.plugin = _pl;
         this.databaseManager = new DatabaseManager(plugin);
         
         // Pobieranie świata (zakładamy że domyślna to "world")
-        World world = Bukkit.getWorld("world");
+        world = Bukkit.getWorld("world");
         if (world == null) {
             plugin.getLogger().severe("Świat 'world' nie istnieje!");
             this.islandGenerator = null;
@@ -144,6 +145,39 @@ public class IslandManager {
             return;
         island.removeFromIslandMembers(playerUuid);
         databaseManager.removeMember(island.getOwnerUUID(), playerUuid);
+    }
+
+    public void expandIsland(Island island, int newSize) {
+        // Pobieranie aktualnych granic
+        Location currentMin = island.getBuildableMinBlock();
+        Location currentMax = island.getBuildableMaxBlock();
+        
+        if (currentMin == null || currentMax == null) {
+            plugin.getLogger().severe("Wyspa nie ma zdefiniowanego regionu!");
+            return;
+        }
+
+        // Obliczenie środka z istniejących granic
+        double centerX = (currentMin.getX() + currentMax.getX()) / 2;
+        double centerZ = (currentMin.getZ() + currentMax.getZ()) / 2;
+        double centerY = currentMin.getY();
+
+        // Obliczenie nowych granic od środka
+        int halfSize = newSize / 2;
+        double minX = centerX - halfSize;
+        double maxX = centerX + halfSize;
+        double minZ = centerZ - halfSize;
+        double maxZ = centerZ + halfSize;
+
+        // Ustawienie nowych granic budowania
+        Location newMin = new Location(world, minX, centerY, minZ);
+        Location newMax = new Location(world, maxX, 255, maxZ);
+        island.setBuildableRegion(newMin, newMax);
+
+        // Zapis do bazy
+        databaseManager.saveIsland(island);
+        
+        plugin.getLogger().info("Wyspa " + island.getOwnerUUID() + " rozszerzona na " + newSize + "x" + newSize);
     }
 
     public void setLobbyLocation(Location loc) {

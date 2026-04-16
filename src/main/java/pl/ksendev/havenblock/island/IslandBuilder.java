@@ -8,7 +8,7 @@ public class IslandBuilder {
     private static final int ISLAND_SIZE = 256;           // Rozmiar wyspy
     private static final int PADDING = 10;                // Padding między wyspami
     private static final int GRID_SPACING = ISLAND_SIZE + PADDING; // 266
-    private static final int BUILDABLE_SIZE = 64;         // Pogranicze budowania 64x64
+    private static final int BUILDABLE_SIZE = 32;         // Pogranicze budowania 64x64
     private static final int ISLAND_HEIGHT = 64;          // Wysokość na której się pojawiają wyspy
 
     private final World world;

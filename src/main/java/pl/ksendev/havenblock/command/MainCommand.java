@@ -27,7 +27,12 @@ public class MainCommand implements CommandExecutor {
         
 
         if (args.length == 0) {
-            showHelp(player);
+            Island playerIsland = plugin.getIslandManager().getIsland(player.getUniqueId());
+            if (playerIsland == null) {
+                MessageUtils.sendMessage(sender, "<red>Nie masz wyspy! Uzyj /hb create", true);
+                return true;
+            }
+            plugin.getIslandGui().openMainMenu(player);
             return true;
         }
 
@@ -55,7 +60,7 @@ public class MainCommand implements CommandExecutor {
                 player.teleport(plugin.getIslandManager().getLobbyLocation());
             }
             else
-                MessageUtils.sendMessage(sender, "<red>Nie masz wyspy!", true);
+                MessageUtils.sendMessage(sender, "<red>Nie masz wyspy! Uzyj /hb create", true);
             return true;
         }
 
@@ -145,7 +150,8 @@ public class MainCommand implements CommandExecutor {
             }
             plugin.getIslandManager().kickPlayerFromIsland(playerIsland, kickingPlayer.getUniqueId());
             MessageUtils.sendMessage(player, "<green>Wyrzucono gracza <yellow>" + kickingPlayer.getName() + "</yellow> z wyspy", true);
-            MessageUtils.sendMessage(kickingPlayer, "<yellow>Zostałeś wyrzucony z wyspy.", true);
+            if (kickingPlayer.isOnline())
+                MessageUtils.sendMessage(kickingPlayer, "<yellow>Zostałeś wyrzucony z wyspy.", true);
             kickingPlayer.teleport(plugin.getIslandManager().getLobbyLocation());
             return true;
         }

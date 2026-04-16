@@ -1,11 +1,14 @@
+pl\ksendev\havenblock\utils\GuiUtils.class
 pl\ksendev\havenblock\utils\MessageUtils.class
 pl\ksendev\havenblock\database\DatabaseManager.class
+pl\ksendev\havenblock\gui\IslandGui.class
 pl\ksendev\havenblock\island\Island.class
 pl\ksendev\havenblock\island\IslandBuilder.class
 pl\ksendev\havenblock\island\IslandGenerator.class
 pl\ksendev\havenblock\invites\InvitationManager.class
 pl\ksendev\havenblock\HavenBlock.class
 pl\ksendev\havenblock\island\IslandRoles.class
+pl\ksendev\havenblock\protection\BuildProtectionListener.class
 pl\ksendev\havenblock\island\IslandManager.class
 pl\ksendev\havenblock\island\SchematicManager.class
 pl\ksendev\havenblock\command\MainCommand.class
